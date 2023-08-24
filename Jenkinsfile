@@ -121,15 +121,80 @@
 // }
 
 
+// pipeline {
+//     agent any
+//     tools {nodejs "NodeJs"}
+
+//     environment {
+//         AWS_DEFAULT_REGION = 'us-east-1'
+//         DEV_S3_BUCKET = 'demo-pro-java'
+//         PROD_S3_BUCKET = 'demo-pro-java-prod'
+//         BRANCH_NAME = sh(script: 'echo $GIT_BRANCH | cut -d/ -f2', returnStdout: true).trim()
+//     }
+
+//     stages {
+//         stage('NPM Version Check') {
+//             steps {
+//                 sh 'npm -v'
+//             }
+//         }
+
+//         stage('Build') {
+//             steps {
+//                 sh 'npm install'
+//                 sh 'npm run build'
+//             }
+//         }
+
+//         stage('Debug Info') {
+//             steps {
+//                 sh 'echo BRANCH_NAME: $BRANCH_NAME'
+//             }
+//         }
+
+//         stage('Deploy to S3') {
+//             steps {
+//                 script {
+//                     if (BRANCH_NAME == 'main') {
+//                         sh "/var/lib/jenkins/awscli-env/bin/aws s3 cp build/ s3://${PROD_S3_BUCKET}/ --recursive --region ${AWS_DEFAULT_REGION}"
+//                     } else if (BRANCH_NAME == 'dev') {
+//                         sh "/var/lib/jenkins/awscli-env/bin/aws s3 cp build/ s3://${DEV_S3_BUCKET}/ --recursive --region ${AWS_DEFAULT_REGION}"
+//                     } else {
+//                         error "Unsupported branch: ${BRANCH_NAME}"
+//                     }
+//                 }
+//             }
+//         }
+//     }
+    
+//     post {
+//         always {
+//             sh 'rm -rf node_modules build'
+//         }
+//     }
+// }
+
 pipeline {
     agent any
     tools {nodejs "NodeJs"}
+
+    parameters {
+        choice(
+            choices: 'main,dev',
+            description: 'Select the branch to build', 
+            name: 'BRANCH_TO_BUILD'
+        )
+        booleanParam(
+            defaultValue: true,
+            description: 'Build latest commit from selected branch',
+            name: 'BUILD_LATEST_COMMIT'
+        )
+    }
 
     environment {
         AWS_DEFAULT_REGION = 'us-east-1'
         DEV_S3_BUCKET = 'demo-pro-java'
         PROD_S3_BUCKET = 'demo-pro-java-prod'
-        BRANCH_NAME = sh(script: 'echo $GIT_BRANCH | cut -d/ -f2', returnStdout: true).trim()
     }
 
     stages {
@@ -146,21 +211,29 @@ pipeline {
             }
         }
 
-        stage('Debug Info') {
-            steps {
-                sh 'echo BRANCH_NAME: $BRANCH_NAME'
-            }
-        }
-
         stage('Deploy to S3') {
             steps {
-                script {
-                    if (BRANCH_NAME == 'main') {
-                        sh "/var/lib/jenkins/awscli-env/bin/aws s3 cp build/ s3://${PROD_S3_BUCKET}/ --recursive --region ${AWS_DEFAULT_REGION}"
-                    } else if (BRANCH_NAME == 'dev') {
-                        sh "/var/lib/jenkins/awscli-env/bin/aws s3 cp build/ s3://${DEV_S3_BUCKET}/ --recursive --region ${AWS_DEFAULT_REGION}"
-                    } else {
-                        error "Unsupported branch: ${BRANCH_NAME}"
+                withCredentials([
+                    [$class: 'AmazonWebServicesCredentialsBinding', 
+                     credentialsId: 'AWS_Credentials', 
+                     accessKeyVariable: 'AWS_ACCESS_KEY_ID', 
+                     secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']
+                ]) {
+                    sh 'whoami'
+                    script {
+                        def selectedBranch = params.BRANCH_TO_BUILD ?: 'main'
+                        def commitRef = params.BUILD_LATEST_COMMIT ? "origin/${selectedBranch}" : "HEAD"
+                        
+                        sh "git fetch origin ${selectedBranch}"
+                        sh "git checkout ${commitRef}"
+                        
+                        if (selectedBranch == 'main') {
+                            sh "/var/lib/jenkins/awscli-env/bin/aws s3 cp build/ s3://${PROD_S3_BUCKET}/ --recursive --region ${AWS_DEFAULT_REGION}"
+                        } else if (selectedBranch == 'dev') {
+                            sh "/var/lib/jenkins/awscli-env/bin/aws s3 cp build/ s3://${DEV_S3_BUCKET}/ --recursive --region ${AWS_DEFAULT_REGION}"
+                        } else {
+                            error "Unsupported branch: ${selectedBranch}"
+                        }
                     }
                 }
             }
@@ -173,6 +246,5 @@ pipeline {
         }
     }
 }
-
 
 
