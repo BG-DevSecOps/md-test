@@ -211,12 +211,12 @@ pipeline {
         stage('Deploy to S3') {
             steps {
                 script {
-                    if (BRANCH_NAME == 'main') {
+                    if (env.BRANCH_NAME == 'main') {
                         sh "/var/lib/jenkins/awscli-env/bin/aws s3 cp build/ s3://${PROD_S3_BUCKET}/ --recursive --region ${AWS_DEFAULT_REGION}"
-                    } else if (BRANCH_NAME == 'dev') {
+                    } else if (env.BRANCH_NAME == 'dev') {
                         sh "/var/lib/jenkins/awscli-env/bin/aws s3 cp build/ s3://${DEV_S3_BUCKET}/ --recursive --region ${AWS_DEFAULT_REGION}"
                     } else {
-                        error "Unsupported branch: ${BRANCH_NAME}"
+                        error "Unsupported branch: ${env.BRANCH_NAME}"
                     }
                 }
             }
@@ -229,3 +229,4 @@ pipeline {
         }
     }
 }
+
