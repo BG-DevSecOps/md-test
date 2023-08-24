@@ -132,17 +132,6 @@ pipeline {
     }
 
     stages {
-        stage('Git Checkout') {
-            steps {
-                script {
-                    git(
-                        credentialsId: 'karthik_GitHub_Credentials',
-                        url: 'https://github.com/BG-DevSecOps/md-test.git',
-                        branch: 'main'
-                    )
-                }
-            }  
-        }
 
         stage('NPM Version Check') {
             steps {
@@ -186,3 +175,5 @@ pipeline {
         }
     }
 }
+
+
