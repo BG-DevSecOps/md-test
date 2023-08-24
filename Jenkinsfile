@@ -107,7 +107,7 @@ pipeline {
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'AWS_Credentials', accessKeyVariable: 'AWS_ACCESS_KEY_ID', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
                     sh 'whoami'
-                    sh "/home/bguser/.local/bin/aws s3 cp build/ s3://${S3_BUCKET}/ --recursive --region ${AWS_DEFAULT_REGION}"
+                    sh "/var/lib/jenkins/awscli-env/bin/aws s3 cp build/ s3://${S3_BUCKET}/ --recursive --region ${AWS_DEFAULT_REGION}"
                 }
             }
         }
