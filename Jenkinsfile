@@ -121,97 +121,21 @@
 // }
 
 
-// pipeline {
-//     agent any
-//     tools {nodejs "NodeJs"}
-
-//     environment {
-//         AWS_DEFAULT_REGION = 'us-east-1'
-//         DEV_S3_BUCKET = 'demo-pro-java'
-//         PROD_S3_BUCKET = 'demo-pro-java-prod'
-//         BRANCH_NAME = sh(script: 'echo $GIT_BRANCH | cut -d/ -f2', returnStdout: true).trim()
-//     }
-
-//     stages {
-//         stage('NPM Version Check') {
-//             steps {
-//                 sh 'npm -v'
-//             }
-//         }
-
-//         stage('Build') {
-//             steps {
-//                 sh 'npm install'
-//                 sh 'npm run build'
-//             }
-//         }
-
-//         stage('Debug Info') {
-//             steps {
-//                 sh 'echo BRANCH_NAME: $BRANCH_NAME'
-//             }
-//         }
-
-//         stage('Deploy to S3') {
-//             steps {
-//                 script {
-//                     if (BRANCH_NAME == 'main') {
-//                         sh "/var/lib/jenkins/awscli-env/bin/aws s3 cp build/ s3://${PROD_S3_BUCKET}/ --recursive --region ${AWS_DEFAULT_REGION}"
-//                     } else if (BRANCH_NAME == 'dev') {
-//                         sh "/var/lib/jenkins/awscli-env/bin/aws s3 cp build/ s3://${DEV_S3_BUCKET}/ --recursive --region ${AWS_DEFAULT_REGION}"
-//                     } else {
-//                         error "Unsupported branch: ${BRANCH_NAME}"
-//                     }
-//                 }
-//             }
-//         }
-//     }
-    
-//     post {
-//         always {
-//             sh 'rm -rf node_modules build'
-//         }
-//     }
-// }
-
-
-
 pipeline {
     agent any
     tools {nodejs "NodeJs"}
-
-    parameters {
-        choice(
-            choices: 'main,dev',
-            description: 'Select the branch to build', 
-            name: 'BRANCH_TO_BUILD'
-        )
-    }
 
     environment {
         AWS_DEFAULT_REGION = 'us-east-1'
         DEV_S3_BUCKET = 'demo-pro-java'
         PROD_S3_BUCKET = 'demo-pro-java-prod'
+        BRANCH_NAME = sh(script: 'echo $GIT_BRANCH | cut -d/ -f2', returnStdout: true).trim()
     }
 
     stages {
         stage('NPM Version Check') {
             steps {
                 sh 'npm -v'
-            }
-        }
-
-        stage('Checkout') {
-            steps {
-                script {
-                    def selectedBranch = params.BRANCH_TO_BUILD ?: 'main'
-                    checkout([$class: 'GitSCM', 
-                              branches: [[name: "refs/heads/${selectedBranch}"]],
-                              doGenerateSubmoduleConfigurations: false,
-                              extensions: [],
-                              submoduleCfg: [],
-                              userRemoteConfigs: [[url: 'https://github.com/BG-DevSecOps/md-test.git']]])
-                }
             }
         }
 
@@ -222,10 +146,15 @@ pipeline {
             }
         }
 
+        stage('Debug Info') {
+            steps {
+                sh 'echo BRANCH_NAME: $BRANCH_NAME'
+            }
+        }
+
         stage('Deploy to S3') {
             steps {
                 script {
-                    // Determine the current branch being built using the BRANCH_NAME environment variable
                     if (BRANCH_NAME == 'main') {
                         sh "/var/lib/jenkins/awscli-env/bin/aws s3 cp build/ s3://${PROD_S3_BUCKET}/ --recursive --region ${AWS_DEFAULT_REGION}"
                     } else if (BRANCH_NAME == 'dev') {
@@ -236,7 +165,6 @@ pipeline {
                 }
             }
         }
-
     }
     
     post {
@@ -245,3 +173,5 @@ pipeline {
         }
     }
 }
+
+
