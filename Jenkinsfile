@@ -174,6 +174,8 @@
 //     }
 // }
 
+
+
 pipeline {
     agent any
     tools {nodejs "NodeJs"}
@@ -204,6 +206,18 @@ pipeline {
             }
         }
 
+        stage('Git Checkout') {
+            steps {
+                script {
+                    def selectedBranch = params.BRANCH_TO_BUILD ?: 'main'
+                    def commitRef = params.BUILD_LATEST_COMMIT ? "origin/${selectedBranch}" : "HEAD"
+
+                    sh "git fetch origin ${selectedBranch}"
+                    sh "git checkout ${commitRef}"
+                }
+            }
+        }
+
         stage('Build') {
             steps {
                 sh 'npm install'
@@ -222,10 +236,6 @@ pipeline {
                     sh 'whoami'
                     script {
                         def selectedBranch = params.BRANCH_TO_BUILD ?: 'main'
-                        def commitRef = params.BUILD_LATEST_COMMIT ? "origin/${selectedBranch}" : "HEAD"
-                        
-                        sh "git fetch origin ${selectedBranch}"
-                        sh "git checkout ${commitRef}"
                         
                         if (selectedBranch == 'main') {
                             sh "/var/lib/jenkins/awscli-env/bin/aws s3 cp build/ s3://${PROD_S3_BUCKET}/ --recursive --region ${AWS_DEFAULT_REGION}"
@@ -246,5 +256,3 @@ pipeline {
         }
     }
 }
-
-
