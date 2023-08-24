@@ -264,20 +264,18 @@ pipeline {
         }
 
         stage('Deploy to S3 - Main') {
-            when {
-                expression { env.BRANCH_NAME == 'main' }
-            }
             steps {
-                sh "/var/lib/jenkins/awscli-env/bin/aws s3 cp build/ s3://${PROD_S3_BUCKET}/ --recursive --region ${AWS_DEFAULT_REGION}"
+                script {
+                    sh "/var/lib/jenkins/awscli-env/bin/aws s3 cp build/ s3://${PROD_S3_BUCKET}/ --recursive --region ${AWS_DEFAULT_REGION}"
+                }
             }
         }
 
         stage('Deploy to S3 - Dev') {
-            when {
-                expression { env.BRANCH_NAME == 'dev' }
-            }
             steps {
-                sh "/var/lib/jenkins/awscli-env/bin/aws s3 cp build/ s3://${DEV_S3_BUCKET}/ --recursive --region ${AWS_DEFAULT_REGION}"
+                script {
+                    sh "/var/lib/jenkins/awscli-env/bin/aws s3 cp build/ s3://${DEV_S3_BUCKET}/ --recursive --region ${AWS_DEFAULT_REGION}"
+                }
             }
         }
     }
@@ -288,4 +286,5 @@ pipeline {
         }
     }
 }
+
 
