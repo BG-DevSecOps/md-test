@@ -129,10 +129,10 @@ pipeline {
         AWS_DEFAULT_REGION = 'us-east-1'
         DEV_S3_BUCKET = 'demo-pro-java'
         PROD_S3_BUCKET = 'demo-pro-java-prod'
+        BRANCH_NAME = "${GIT_BRANCH}"
     }
 
     stages {
-
         stage('NPM Version Check') {
             steps {
                 sh 'npm -v'
@@ -146,23 +146,21 @@ pipeline {
             }
         }
 
+        stage('Debug Info') {
+            steps {
+                sh 'echo BRANCH_NAME: $BRANCH_NAME'
+            }
+        }
+
         stage('Deploy to S3') {
             steps {
-                withCredentials([
-                    [$class: 'AmazonWebServicesCredentialsBinding', 
-                     credentialsId: 'AWS_Credentials', 
-                     accessKeyVariable: 'AWS_ACCESS_KEY_ID', 
-                     secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']
-                ]) {
-                    sh 'whoami'
-                    script {
-                        if (env.BRANCH_NAME == 'main') {
-                            sh "/var/lib/jenkins/awscli-env/bin/aws s3 cp build/ s3://${PROD_S3_BUCKET}/ --recursive --region ${AWS_DEFAULT_REGION}"
-                        } else if (env.BRANCH_NAME == 'dev') {
-                            sh "/var/lib/jenkins/awscli-env/bin/aws s3 cp build/ s3://${DEV_S3_BUCKET}/ --recursive --region ${AWS_DEFAULT_REGION}"
-                        } else {
-                            error "Unsupported branch: ${env.BRANCH_NAME}"
-                        }
+                script {
+                    if (BRANCH_NAME == 'main') {
+                        sh "/var/lib/jenkins/awscli-env/bin/aws s3 cp build/ s3://${PROD_S3_BUCKET}/ --recursive --region ${AWS_DEFAULT_REGION}"
+                    } else if (BRANCH_NAME == 'dev') {
+                        sh "/var/lib/jenkins/awscli-env/bin/aws s3 cp build/ s3://${DEV_S3_BUCKET}/ --recursive --region ${AWS_DEFAULT_REGION}"
+                    } else {
+                        error "Unsupported branch: ${BRANCH_NAME}"
                     }
                 }
             }
@@ -175,5 +173,6 @@ pipeline {
         }
     }
 }
+
 
 
