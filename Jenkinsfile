@@ -129,7 +129,7 @@ pipeline {
         AWS_DEFAULT_REGION = 'us-east-1'
         DEV_S3_BUCKET = 'demo-pro-java'
         PROD_S3_BUCKET = 'demo-pro-java-prod'
-        BRANCH_NAME = "${GIT_BRANCH}"
+        BRANCH_NAME = sh(script: 'echo $GIT_BRANCH | cut -d/ -f2', returnStdout: true).trim()
     }
 
     stages {
