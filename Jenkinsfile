@@ -264,6 +264,9 @@ pipeline {
         }
 
         stage('Deploy to S3 - Main') {
+            when {
+                expression { BRANCH_NAME == 'main' }
+            }
             steps {
                 script {
                     sh "/var/lib/jenkins/awscli-env/bin/aws s3 cp build/ s3://${PROD_S3_BUCKET}/ --recursive --region ${AWS_DEFAULT_REGION}"
@@ -272,6 +275,9 @@ pipeline {
         }
 
         stage('Deploy to S3 - Dev') {
+            when {
+                expression { BRANCH_NAME == 'dev' }
+            }
             steps {
                 script {
                     sh "/var/lib/jenkins/awscli-env/bin/aws s3 cp build/ s3://${DEV_S3_BUCKET}/ --recursive --region ${AWS_DEFAULT_REGION}"
@@ -279,12 +285,13 @@ pipeline {
             }
         }
     }
-
+    
     post {
         always {
             sh 'rm -rf node_modules build'
         }
     }
 }
+
 
 
