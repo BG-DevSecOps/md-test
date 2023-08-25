@@ -122,62 +122,6 @@
 
 // ///////////////////////////////////////////pipeline job///////////////////////////////////////
 
-
-// pipeline {
-//     agent any
-//     tools {nodejs "NodeJs"}
-
-//     environment {
-//         AWS_DEFAULT_REGION = 'us-east-1'
-//         DEV_S3_BUCKET = 'demo-pro-java'
-//         PROD_S3_BUCKET = 'demo-pro-java-prod'
-//         BRANCH_NAME = sh(script: 'echo $GIT_BRANCH | cut -d/ -f2', returnStdout: true).trim()
-//     }
-
-//     stages {
-//         stage('NPM Version Check') {
-//             steps {
-//                 sh 'npm -v'
-//             }
-//         }
-
-//         stage('Build') {
-//             steps {
-//                 sh 'npm install'
-//                 sh 'npm run build'
-//             }
-//         }
-
-//         stage('Debug Info') {
-//             steps {
-//                 sh 'echo BRANCH_NAME: $BRANCH_NAME'
-//             }
-//         }
-
-//         stage('Deploy to S3') {
-//             steps {
-//                 script {
-//                     if (BRANCH_NAME == 'main') {
-//                         sh "/var/lib/jenkins/awscli-env/bin/aws s3 cp build/ s3://${PROD_S3_BUCKET}/ --recursive --region ${AWS_DEFAULT_REGION}"
-//                     } else if (BRANCH_NAME == 'dev') {
-//                         sh "/var/lib/jenkins/awscli-env/bin/aws s3 cp build/ s3://${DEV_S3_BUCKET}/ --recursive --region ${AWS_DEFAULT_REGION}"
-//                     } else {
-//                         error "Unsupported branch: ${BRANCH_NAME}"
-//                     }
-//                 }
-//             }
-//         }
-//     }
-    
-//     post {
-//         always {
-//             sh 'rm -rf node_modules build'
-//         }
-//     }
-// }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
-
 // pipeline {
 //     agent any
 //     tools {nodejs "NodeJs"}
@@ -208,16 +152,24 @@
 //             }
 //         }
 
-//         stage('Deploy to S3') {
+//         stage('Deploy to S3 - Main') {
+//             when {
+//                 expression { BRANCH_NAME == 'main' }
+//             }
 //             steps {
 //                 script {
-//                     if (env.BRANCH_NAME == 'main') {
-//                         sh "/var/lib/jenkins/awscli-env/bin/aws s3 cp build/ s3://${PROD_S3_BUCKET}/ --recursive --region ${AWS_DEFAULT_REGION}"
-//                     } else if (env.BRANCH_NAME == 'dev') {
-//                         sh "/var/lib/jenkins/awscli-env/bin/aws s3 cp build/ s3://${DEV_S3_BUCKET}/ --recursive --region ${AWS_DEFAULT_REGION}"
-//                     } else {
-//                         error "Unsupported branch: ${env.BRANCH_NAME}"
-//                     }
+//                     sh "/var/lib/jenkins/awscli-env/bin/aws s3 cp build/ s3://${PROD_S3_BUCKET}/ --recursive --region ${AWS_DEFAULT_REGION}"
+//                 }
+//             }
+//         }
+
+//         stage('Deploy to S3 - Dev') {
+//             when {
+//                 expression { BRANCH_NAME == 'dev' }
+//             }
+//             steps {
+//                 script {
+//                     sh "/var/lib/jenkins/awscli-env/bin/aws s3 cp build/ s3://${DEV_S3_BUCKET}/ --recursive --region ${AWS_DEFAULT_REGION}"
 //                 }
 //             }
 //         }
@@ -230,54 +182,40 @@
 //     }
 // }
 
-///////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+node {
+    def branchName = env.BRANCH_NAME
 
-pipeline {
-    agent any
-    tools {nodejs "NodeJs"}
-
-    environment {
-        AWS_DEFAULT_REGION = 'us-east-1'
-        DEV_S3_BUCKET = 'demo-pro-java'
-        PROD_S3_BUCKET = 'demo-pro-java-prod'
+    stage('NPM Version Check') {
+        steps {
+            sh 'npm -v'
+        }
     }
 
-    stages {
-        stage('NPM Version Check') {
-            steps {
-                sh 'npm -v'
-            }
+    stage('Build') {
+        steps {
+            sh 'npm install'
+            sh 'npm run build'
         }
+    }
 
-        stage('Build') {
-            steps {
-                sh 'npm install'
-                sh 'npm run build'
-            }
+    stage('Debug Info') {
+        steps {
+            sh 'echo BRANCH_NAME: $BRANCH_NAME'
         }
+    }
 
-        stage('Debug Info') {
-            steps {
-                sh 'echo BRANCH_NAME: $BRANCH_NAME'
-            }
-        }
-
+    if (branchName == 'main') {
         stage('Deploy to S3 - Main') {
-            when {
-                expression { BRANCH_NAME == 'main' }
-            }
             steps {
                 script {
                     sh "/var/lib/jenkins/awscli-env/bin/aws s3 cp build/ s3://${PROD_S3_BUCKET}/ --recursive --region ${AWS_DEFAULT_REGION}"
                 }
             }
         }
-
+    } else if (branchName == 'dev') {
         stage('Deploy to S3 - Dev') {
-            when {
-                expression { BRANCH_NAME == 'dev' }
-            }
             steps {
                 script {
                     sh "/var/lib/jenkins/awscli-env/bin/aws s3 cp build/ s3://${DEV_S3_BUCKET}/ --recursive --region ${AWS_DEFAULT_REGION}"
@@ -285,9 +223,9 @@ pipeline {
             }
         }
     }
-    
-    post {
-        always {
+
+    stage('Clean Up') {
+        steps {
             sh 'rm -rf node_modules build'
         }
     }
