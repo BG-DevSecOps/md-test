@@ -184,50 +184,52 @@
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-node {
-    def branchName = env.BRANCH_NAME
+pipeline {
+    agent any
+    tools {nodejs "NodeJs"}
 
-    stage('NPM Version Check') {
-        steps {
-            sh 'npm -v'
-        }
+    environment {
+        AWS_DEFAULT_REGION = 'us-east-1'
+        DEV_S3_BUCKET = 'demo-pro-java'
+        PROD_S3_BUCKET = 'demo-pro-java-prod'
     }
 
-    stage('Build') {
-        steps {
-            sh 'npm install'
-            sh 'npm run build'
+    stages {
+        stage('NPM Version Check') {
+            steps {
+                sh 'npm -v'
+            }
         }
-    }
 
-    stage('Debug Info') {
-        steps {
-            sh 'echo BRANCH_NAME: $BRANCH_NAME'
+        stage('Build') {
+            steps {
+                sh 'npm install'
+                sh 'npm run build'
+            }
         }
-    }
 
-    if (branchName == 'main') {
-        stage('Deploy to S3 - Main') {
+        stage('Debug Info') {
+            steps {
+                sh 'echo BRANCH_NAME: $BRANCH_NAME'
+            }
+        }
+
+        stage('Deploy to S3') {
             steps {
                 script {
-                    sh "/var/lib/jenkins/awscli-env/bin/aws s3 cp build/ s3://${PROD_S3_BUCKET}/ --recursive --region ${AWS_DEFAULT_REGION}"
+                    if (BRANCH_NAME == 'main') {
+                        sh "/var/lib/jenkins/awscli-env/bin/aws s3 cp build/ s3://${PROD_S3_BUCKET}/ --recursive --region ${AWS_DEFAULT_REGION}"
+                    } else if (BRANCH_NAME == 'dev') {
+                        sh "/var/lib/jenkins/awscli-env/bin/aws s3 cp build/ s3://${DEV_S3_BUCKET}/ --recursive --region ${AWS_DEFAULT_REGION}"
+                    }
                 }
             }
         }
-    } else if (branchName == 'dev') {
-        stage('Deploy to S3 - Dev') {
-            steps {
-                script {
-                    sh "/var/lib/jenkins/awscli-env/bin/aws s3 cp build/ s3://${DEV_S3_BUCKET}/ --recursive --region ${AWS_DEFAULT_REGION}"
-                }
-            }
-        }
     }
-
-    stage('Clean Up') {
-        steps {
+    
+    post {
+        always {
             sh 'rm -rf node_modules build'
         }
     }
 }
-
