@@ -222,7 +222,7 @@ pipeline {
                         sh "/var/lib/jenkins/awscli-env/bin/aws s3 cp build/ s3://${PROD_S3_BUCKET}/ --recursive --region ${AWS_DEFAULT_REGION}"
                         }
                     } else if (BRANCH_NAME == 'dev') {
-                        stage('Deploy to S3 - Prod'){
+                        stage('Deploy to S3 - Dev'){
                         sh "/var/lib/jenkins/awscli-env/bin/aws s3 cp build/ s3://${DEV_S3_BUCKET}/ --recursive --region ${AWS_DEFAULT_REGION}"
                     }
                     }
